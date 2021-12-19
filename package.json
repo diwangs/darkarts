@@ -1,6 +1,6 @@
 {
   "name": "private-nft-transfer",
-  "version": "0.1",
+  "version": "0.1.0",
   "main": "index.js",
   "repository": "git@github.com:diwangs/private-NFT-transfer.git",
   "author": "diwangs <diwangs@cs.jhu.edu>",
@@ -24,12 +24,13 @@
     "build:circuit:withdraw:bin": "node node_modules/websnark/tools/buildpkey.js -i build/circuits/withdraw_proving_key.json -o build/circuits/withdraw_proving_key.bin",
     "build:circuit:withdraw:contract": "npx snarkjs generateverifier -v build/circuits/WithdrawVerifier.sol --vk build/circuits/withdraw_verification_key.json",
     "build:circuit:withdraw:contractcopy": "sed 's/\\^0.5.0/>=0.5.0/g' build/circuits/WithdrawVerifier.sol | sed 's/gas/gas()/g' | sed 's/@return//g' | sed 's/contract Verifier/contract WithdrawVerifier/g' > contracts/WithdrawVerifier.sol",
-    "build:circuit:withdraw": "npm run build:circuit:withdraw:compile && npm run build:circuit:withdraw:setup && npm run build:circuit:withdraw:contract && npm run build:circuit:withdraw:contractcopy",
+    "build:circuit:withdraw": "npm run build:circuit:withdraw:compile && npm run build:circuit:withdraw:setup && npm run build:circuit:withdraw:bin && npm run build:circuit:withdraw:contract && npm run build:circuit:withdraw:contractcopy",
     "build:circuit:send:compile": "npx circom circuits/send.circom -o build/circuits/send.json && npx snarkjs info -c build/circuits/send.json",
     "build:circuit:send:setup": "npx snarkjs setup --protocol groth -c build/circuits/send.json --pk build/circuits/send_proving_key.json --vk build/circuits/send_verification_key.json",
+    "build:circuit:send:bin": "node node_modules/websnark/tools/buildpkey.js -i build/circuits/send_proving_key.json -o build/circuits/send_proving_key.bin",
     "build:circuit:send:contract": "npx snarkjs generateverifier -v build/circuits/SendVerifier.sol --vk build/circuits/send_verification_key.json",
     "build:circuit:send:contractcopy": "sed 's/\\^0.5.0/>=0.5.0/g' build/circuits/SendVerifier.sol | sed 's/gas/gas()/g' | sed 's/@return//g' | sed 's/contract Verifier/contract SendVerifier/g' > contracts/SendVerifier.sol",
-    "build:circuit:send": "npm run build:circuit:send:compile && npm run build:circuit:send:setup && npm run build:circuit:send:contract && npm run build:circuit:send:contractcopy",
+    "build:circuit:send": "npm run build:circuit:send:compile && npm run build:circuit:send:setup && npm run build:circuit:send:bin &&  npm run build:circuit:send:contract && npm run build:circuit:send:contractcopy",
     "build:circuit": "mkdir -p build/circuits && npm run build:circuit:withdraw && npm run build:circuit:send",
     "build:contract": "npx truffle compile",
     "build": "mkdir -p build && npm run build:circuit && npm run build:contract"
