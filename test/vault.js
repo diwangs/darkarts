@@ -6,14 +6,14 @@ const snarkjs = require('snarkjs')
 const BigNumber = require('bignumber.js')
 
 // for withdrawal
-// const buildGroth16 = require('websnark/src/groth16')
+const buildGroth16 = require('websnark/src/groth16')
 const websnarkUtils = require('websnark/src/utils')
 const merkleTree = require('fixed-merkle-tree')
 const fs = require('fs')
+const stringifyBigInts = require('websnark/tools/stringifybigint').stringifyBigInts
 
 // for tests
 const truffleAssert = require('truffle-assertions')
-const { execSync } = require('child_process')
 
 const Token = artifacts.require("UserInfo")
 const Vault = artifacts.require("Vault")
@@ -128,14 +128,14 @@ function createDeposit({ nullifier, secretId, tokenUidId, tokenUidContract }) {
  */
  async function generateWithdrawProof({ vault, deposit }) {
     circuit = require(__dirname + '/../build/circuits/withdraw.json')
-    // proving_key = fs.readFileSync(__dirname + '/../build/circuits/withdraw_proving_key.bin').buffer
-    // groth16 = await buildGroth16()
+    proving_key = fs.readFileSync(__dirname + '/../build/circuits/withdraw_proving_key.bin').buffer
+    groth16 = await buildGroth16()
 
     // Compute merkle proof of our commitment
     const { root, pathElements, pathIndices } = await generateMerkleProof(vault, deposit)
   
     // Prepare circuit input
-    const input = {
+    const input = stringifyBigInts({
       // Public snark inputs
       root: root,
       nullifierHash: deposit.nullifierHash,
@@ -147,14 +147,11 @@ function createDeposit({ nullifier, secretId, tokenUidId, tokenUidContract }) {
       secretId: deposit.secretId,
       pathElements: pathElements,
       pathIndices: pathIndices,
-    }
-    const inputJSON = JSON.stringify(input, (_, v) => typeof v === 'bigint' ? v.toString() : v)
+    })
     
-    console.log('Generating SNARK proof, this may take minutes...')
+    console.log('Generating SNARK proof')
     console.time('Proof time')
-    // const proofData = await websnarkUtils.genWitnessAndProve(groth16, input, circuit, proving_key) // fast but wrong?
-    // const proofData = require(__dirname + '/../proof.json') // for later
-    const proofData = proofSnarkJs(inputJSON, __dirname + '/../build/circuits/withdraw') // TODO: find faster alternative
+    const proofData = await websnarkUtils.genWitnessAndProve(groth16, input, circuit, proving_key) // fast but wrong?
     const { proof } = websnarkUtils.toSolidityInput(proofData)
     console.timeEnd('Proof time')
   
@@ -170,14 +167,14 @@ function createDeposit({ nullifier, secretId, tokenUidId, tokenUidContract }) {
 
 async function generateSendProof({ vault, oldDeposit, newDeposit }) {
     circuit = require(__dirname + '/../build/circuits/send.json')
-    // proving_key = fs.readFileSync(__dirname + '/../build/circuits/withdraw_proving_key.bin').buffer
-    // groth16 = await buildGroth16()
+    proving_key = fs.readFileSync(__dirname + '/../build/circuits/send_proving_key.bin').buffer
+    groth16 = await buildGroth16()
 
     // Compute merkle proof of our commitment
     const { root, pathElements, pathIndices } = await generateMerkleProof(vault, oldDeposit)
   
     // Prepare circuit input
-    const input = {
+    const _input = {
       // Public snark inputs
       oldRoot: root,
       oldNullifierHash: oldDeposit.nullifierHash,
@@ -195,20 +192,18 @@ async function generateSendProof({ vault, oldDeposit, newDeposit }) {
       newTokenUidId: newDeposit.tokenUidId,
       newTokenUidContract: newDeposit.tokenUidContract,
     }
-    const inputJSON = JSON.stringify(input, (_, v) => typeof v === 'bigint' ? v.toString() : v)
+    const input = stringifyBigInts(_input)
     
-    console.log('Generating SNARK proof, this may take minutes...')
+    console.log('Generating SNARK proof')
     console.time('Proof time')
-    // const proofData = await websnarkUtils.genWitnessAndProve(groth16, input, circuit, proving_key) // fast but wrong?
-    // const proofData = require(__dirname + '/../proof.json') // for later
-    const proofData = proofSnarkJs(inputJSON, __dirname + '/../build/circuits/send') // TODO: find faster alternative
+    const proofData = await websnarkUtils.genWitnessAndProve(groth16, input, circuit, proving_key) // fast but wrong?
     const { proof } = websnarkUtils.toSolidityInput(proofData)
     console.timeEnd('Proof time')
   
     const args = [
-      toHex(input.oldRoot),
-      toHex(input.oldNullifierHash),
-      toHex(input.newCommitment),
+      toHex(_input.oldRoot),
+      toHex(_input.oldNullifierHash),
+      toHex(_input.newCommitment),
     ]
 
     return { proof, args }
@@ -243,14 +238,4 @@ async function generateSendProof({ vault, oldDeposit, newDeposit }) {
     // Compute merkle proof of our commitment
     const { pathElements, pathIndices } = tree.path(leafIndex)
     return { pathElements, pathIndices, root: tree.root() }
-}
-
-function proofSnarkJs(inputJSON, baseDir) {
-    fs.writeFileSync(baseDir + '_input.json', inputJSON)
-    
-    execSync("npx snarkjs calculatewitness -c " + baseDir + ".json -i " + baseDir + "_input.json -w " + baseDir + "_witness.json") // produces witness.json
-    execSync("npx snarkjs proof -w " + baseDir + "_witness.json --pk " + baseDir + "_proving_key.json -p " + baseDir + "_proof.json --pub " + baseDir + "_public.json") // produces proof.json and public.json
-    const proofData = require(baseDir + '_proof.json')
-
-    return proofData
 }
