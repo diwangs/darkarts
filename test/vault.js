@@ -21,10 +21,27 @@ const Vault = artifacts.require("Vault")
 contract("Vault", accounts => {
     let vault;
     let token;
+    let groth16;
+
+    let withdraw_circuit;
+    let withdraw_proving_key;
+
+    let send_circuit;
+    let send_proving_key;
+
+    before(async () => {
+        groth16 = await buildGroth16();
+
+        withdraw_circuit = require(__dirname + '/../build/circuits/withdraw.json');
+        withdraw_proving_key = fs.readFileSync(__dirname + '/../build/circuits/withdraw_proving_key.bin').buffer;
+
+        send_circuit = require(__dirname + '/../build/circuits/send.json');
+        send_proving_key = fs.readFileSync(__dirname + '/../build/circuits/send_proving_key.bin').buffer;
+    })
 
     beforeEach(async () => {
         token = await Token.deployed()
-        vault = await Vault.deployed() 
+        vault = await Vault.deployed()
     })
     
     it("e2e test", async () => {
@@ -56,7 +73,7 @@ contract("Vault", accounts => {
             tokenUidContract: toyUidContract,
         })
 
-        // approve
+        // Approve
         const tokenIdHex = toHex(toyUidId)
         await token.approve(vaultAddressHex, tokenIdHex, {from: accounts[0]})
 
@@ -70,7 +87,14 @@ contract("Vault", accounts => {
 
         // Send
         console.log("Send") 
-        const r1 = await generateSendProof({ vault, oldDeposit: deposit1, newDeposit: deposit2 })
+        const r1 = await generateSendProof({
+            vault,
+            oldDeposit: deposit1,
+            newDeposit: deposit2,
+            groth16: groth16,
+            circuit: send_circuit,
+            proving_key: send_proving_key
+        })
         tx = await vault.send(r1.proof, ...r1.args, {from: accounts[0]})
 
         truffleAssert.eventEmitted(tx, 'Withdrawal', (e) => {
@@ -82,7 +106,13 @@ contract("Vault", accounts => {
 
         // Withdraw
         console.log("Withdraw") 
-        const r2 = await generateWithdrawProof({ vault, deposit: deposit2 })
+        const r2 = await generateWithdrawProof({
+            vault,
+            deposit: deposit2,
+            groth16: groth16,
+            circuit: withdraw_circuit,
+            proving_key: withdraw_proving_key
+        })
         tx = await vault.withdraw(r2.proof, ...r2.args, {from: accounts[1]})
         
         truffleAssert.eventEmitted(tx, 'Withdrawal', (e) => {
@@ -126,11 +156,7 @@ function createDeposit({ nullifier, secretId, tokenUidId, tokenUidContract }) {
  * @param fee Relayer fee
  * @param refund Receive ether for exchanged tokens
  */
- async function generateWithdrawProof({ vault, deposit }) {
-    circuit = require(__dirname + '/../build/circuits/withdraw.json')
-    proving_key = fs.readFileSync(__dirname + '/../build/circuits/withdraw_proving_key.bin').buffer
-    groth16 = await buildGroth16()
-
+ async function generateWithdrawProof({ vault, deposit, groth16, circuit, proving_key }) {
     // Compute merkle proof of our commitment
     const { root, pathElements, pathIndices } = await generateMerkleProof(vault, deposit)
   
@@ -151,7 +177,7 @@ function createDeposit({ nullifier, secretId, tokenUidId, tokenUidContract }) {
     
     console.log('Generating SNARK proof')
     console.time('Proof time')
-    const proofData = await websnarkUtils.genWitnessAndProve(groth16, input, circuit, proving_key) // fast but wrong?
+    const proofData = await websnarkUtils.genWitnessAndProve(groth16, input, circuit, proving_key)
     const { proof } = websnarkUtils.toSolidityInput(proofData)
     console.timeEnd('Proof time')
   
@@ -165,11 +191,7 @@ function createDeposit({ nullifier, secretId, tokenUidId, tokenUidContract }) {
     return { proof, args }
 }
 
-async function generateSendProof({ vault, oldDeposit, newDeposit }) {
-    circuit = require(__dirname + '/../build/circuits/send.json')
-    proving_key = fs.readFileSync(__dirname + '/../build/circuits/send_proving_key.bin').buffer
-    groth16 = await buildGroth16()
-
+async function generateSendProof({ vault, oldDeposit, newDeposit, groth16, circuit, proving_key }) {
     // Compute merkle proof of our commitment
     const { root, pathElements, pathIndices } = await generateMerkleProof(vault, oldDeposit)
   
@@ -196,7 +218,7 @@ async function generateSendProof({ vault, oldDeposit, newDeposit }) {
     
     console.log('Generating SNARK proof')
     console.time('Proof time')
-    const proofData = await websnarkUtils.genWitnessAndProve(groth16, input, circuit, proving_key) // fast but wrong?
+    const proofData = await websnarkUtils.genWitnessAndProve(groth16, input, circuit, proving_key)
     const { proof } = websnarkUtils.toSolidityInput(proofData)
     console.timeEnd('Proof time')
   
