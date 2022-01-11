@@ -1,0 +1,26 @@
+import "hashes/pedersen/512bit" as hash
+import "hashes/mimcSponge/mimcSponge" as mimcSponge
+import "ecc/edwardsCompress" as edwardsCompress
+import "hashes/utils/256bitsDirectionHelper" as multiplex
+
+import "utils/pack/u32/nonStrictUnpack256" as unpack
+import "utils/pack/bool/unpack256" as unpack256
+import "utils/casts/bool_256_to_u32_8" as from_bits
+import "utils/pack/u32/pack256" as pack
+
+// Merke-Tree inclusion proof for tree depth 3 using SNARK efficient pedersen hashes
+// directionSelector=> true if current digest is on the rhs of the hash
+
+def main(field rootDigest, private field leafDigest, private bool[20] directionSelector, field[20] pathDigest):
+	// Setup
+	field currentDigest = leafDigest
+
+	for u32 i in 0..20 do 
+		field[2] input = if directionSelector[i] then [pathDigest[i], currentDigest] else [currentDigest, pathDigest[i]] fi
+		field[1] result = mimcSponge(input, 0f)
+		currentDigest = result[0]
+	endfor
+
+	assert(currentDigest == rootDigest)
+
+	return

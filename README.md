@@ -1,7 +1,7 @@
 # Private NFT Transfer 🎨
 Anonymously transfer ERC-721 NFT with zero-knowledge proofs
 
-## Commands
+## Develop
 ### Build 
 - Build all circuits and contracts
 ```
@@ -14,6 +14,15 @@ npm run build
 ```
 npx truffle test test/vault.js
 ```
+
+### Note on zokkrates-js
+The latest version (1.0.38) is bugged since it doesn't include the necessary 
+WASM binary, and the recommended working version (1.0.24) doesn't support for
+loops properly. So this repo assumes that you will compile zokrates-js manually
+and copy them to `node_modules`:
+1. Clone the `ZoKrates` repo
+2. Do `npm build` in the `zokrates_js` folder
+3. Copy `npm/pkg` to this repo's `node_modules`
 
 ## Usage Flow and Comparison With tornado.cash
 The flow of this app is similar to that of tornado.cash. The contract acts like some sort of mixnet pool:
