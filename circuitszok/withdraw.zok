@@ -1,0 +1,21 @@
+from "./nullifierHasher" import main as nullifierHasher
+from "./idChecker" import main as idChecker
+from "./commitmentHasher" import main as commitmentHasher
+from "./merkleTree" import main as merkleTree
+
+def main(field rootDigest, field nullifierHash, field tokenUidId, field tokenUidContract, private field nullifier, private field secretId, private field[20] pathDigest, private bool[20] directionSelector):
+    // nullifierHash are well formed
+    field nullifierHashResult = nullifierHasher(nullifier)
+    assert(nullifierHashResult == nullifierHash)
+    
+    // publicId is paired with the correct secretId
+    field publicId = idChecker(secretId)
+
+    // Commitment are well formed
+    field commitment = commitmentHasher(nullifier, publicId, tokenUidId, tokenUidContract)
+
+    // Commitment appears on the ledger
+    field rootDigestResult = merkleTree(commitment, pathDigest, directionSelector)
+    assert(rootDigestResult == rootDigest)
+
+    return

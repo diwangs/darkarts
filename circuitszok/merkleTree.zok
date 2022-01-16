@@ -1,6 +1,6 @@
 import "hashes/mimcSponge/mimcSponge" as mimcSponge
 
-def main(field rootDigest, private field leafDigest, private bool[20] directionSelector, field[20] pathDigest):
+def main(private field leafDigest, private field[20] pathDigest, private bool[20] directionSelector) -> field:
 	// Setup
 	field currentDigest = leafDigest
 
@@ -10,6 +10,6 @@ def main(field rootDigest, private field leafDigest, private bool[20] directionS
 		currentDigest = result[0]
 	endfor
 
-	assert(currentDigest == rootDigest)
+	// assert(currentDigest == rootDigest)
 
-	return
+	return currentDigest

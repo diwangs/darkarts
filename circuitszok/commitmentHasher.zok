@@ -1,0 +1,6 @@
+import "hashes/mimcSponge/mimcSponge" as mimcSponge
+
+def main(field nullifier, field publicId, field tokenUidId, field tokenUidContract) -> field:
+    field[4] preimage = [nullifier, publicId, tokenUidId, tokenUidContract]
+    field[1] output = mimcSponge(preimage, 0f)
+    return output[0]
