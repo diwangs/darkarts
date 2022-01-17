@@ -6,9 +6,9 @@ const { initialize } = require('zokrates-js/node')
 const truffleAssert = require('truffle-assertions')
 
 // not really needed?
-const circomlib = require('circomlib')
-const snarkjs = require('snarkjs')
-const BigNumber = require('bignumber.js')
+const circomlib = require('circomlib') // for mimcSponge
+const snarkjs = require('snarkjs') // for toHex
+const BigNumber = require('bignumber.js') // for fromHex?
 
 const Token = artifacts.require("UserInfo")
 const Vault = artifacts.require("Vault")
