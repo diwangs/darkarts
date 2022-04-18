@@ -12,13 +12,18 @@ describe("Dummy Token", function() {
         [owner, addr1, addr2] = await ethers.getSigners()
     })
     
-    describe("Tx", function() {
-        it("Should return something", async function () {
-            await nft.awardItem(addr1.address, "Some URL")
-            const addr1Balance = await nft.balanceOf(addr1.address) 
-            // Why doesn't ownerOf work?
-            // https://github.com/TrueFiEng/Waffle/issues/339
-            expect(addr1Balance).to.equal(1)
-        })    
+    it("Should award token correctly", async function () {
+        // Dual awardItem call: https://docs.ethers.io/v5/single-page/#/v5/api/contract/contract/-%23-contract-callStatic
+        const tokenId = await nft.callStatic.awardItem(addr1.address, "Some URL")
+        await nft.awardItem(addr1.address, "Some URL")
+        expect(await nft.ownerOf(tokenId)).to.equal(addr1.address)
+    })
+
+    it("Should send token correctly", async function () {
+        const tokenId = await nft.callStatic.awardItem(addr1.address, "Some URL")
+        await nft.awardItem(addr1.address, "Some URL")
+        await nft.connect(addr1).transferFrom(addr1.address, addr2.address, tokenId)
+        expect(await nft.ownerOf(tokenId)).to.equal(addr2.address)
+
     })
 })
